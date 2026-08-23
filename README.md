@@ -94,9 +94,16 @@ usually propagates within an hour, occasionally up to 24.
 
 **4. Afterwards**
 
-Once the site is confirmed live on Cloudflare, the Hostinger hosting plan is no
-longer doing anything and can be cancelled at renewal. Keep the domain
-registration wherever it is — only the nameservers matter.
+Nothing. The Hostinger plan is prepaid through 2029, so leave it running and
+ignore it - that money is spent either way, and cancelling recovers none of it.
+The domain stays registered with Hostinger too; changing nameservers neither
+transfers it nor triggers a charge.
+
+Everything this site runs on sits inside a free tier with room to spare:
+Cloudflare Pages allows 500 deploys a month with unlimited bandwidth and
+requests for static assets, and GitHub Actions allows 2,000 minutes a month on
+private repositories (unlimited on public ones) against roughly 85 minutes of
+actual use.
 
 ## A note on the Substack subdomain
 
