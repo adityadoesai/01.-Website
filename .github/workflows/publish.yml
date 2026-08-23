@@ -1,8 +1,12 @@
 name: Publish site
 
-# Runs on every push, every six hours, and on demand. The scheduled run is what
-# makes a new Substack essay appear on adityadave.in without anyone touching
-# anything.
+# Runs on every push, every six hours, and on demand.
+#
+# Two outputs:
+#   main    - source plus the generated site/, for history and review
+#   deploy  - the finished site at the branch root, which is what Hostinger
+#             pulls. Hostinger deploys a whole branch, not a subfolder, so the
+#             site cannot simply live in site/ on main.
 on:
   push:
     branches: [main]
@@ -37,7 +41,7 @@ jobs:
           FORCE_BUILD: ${{ inputs.force && '1' || '0' }}
         run: python3 build/build.py
 
-      - name: Commit any changes
+      - name: Commit any changes to main
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -46,14 +50,13 @@ jobs:
           if ! git diff --staged --quiet; then
             git commit -m "Rebuild site from Substack feed"
             git push
-            echo "Published. Cloudflare Pages will deploy this commit."
+            echo "changed=yes" >> "$GITHUB_ENV"
             exit 0
           fi
 
-          # Nothing changed. GitHub switches off scheduled workflows after 60
-          # days of repository inactivity, which would silently kill the mirror
-          # during any long gap between essays. A monthly heartbeat commit keeps
-          # the schedule alive without touching the site itself.
+          # GitHub switches off scheduled workflows after 60 days of repository
+          # inactivity, which would silently kill the mirror during any long gap
+          # between essays. A monthly heartbeat keeps the schedule alive.
           last=$(git log -1 --format=%ct)
           now=$(date +%s)
           days=$(( (now - last) / 86400 ))
@@ -65,5 +68,34 @@ jobs:
             git push
             echo "No content changes; pushed a heartbeat (${days} days idle)."
           else
-            echo "No changes - nothing to publish (${days} days since last commit)."
+            echo "No content changes (${days} days since last commit)."
           fi
+
+      - name: Package for Hostinger
+        run: |
+          python3 build/package-hostinger.py
+          # The visible .htaccess twin exists only to survive manual
+          # drag-and-drop uploads. Publishing it would expose the server
+          # config at a readable URL.
+          rm -f _upload-to-public_html/htaccess-RENAME-ME.txt
+
+      - name: Publish the deploy branch
+        run: |
+          # Rebuild the deploy branch from scratch each time. Its history is
+          # disposable - main holds the real history - and a fresh tree
+          # guarantees deleted files actually disappear from the server.
+          work=$(mktemp -d)
+          cp -a _upload-to-public_html/. "$work"/
+
+          cd "$work"
+          git init -q
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -qb deploy
+          git add -A
+          git commit -q -m "Deploy $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push -q --force \
+            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" \
+            deploy
+
+          echo "Pushed $(find . -type f -not -path './.git/*' | wc -l | tr -d ' ') files to the deploy branch."

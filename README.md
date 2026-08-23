@@ -59,51 +59,90 @@ Both cases are far more likely to be a Substack outage than a real deletion, and
 publishing would silently wipe the essays. `site/` is left untouched. If you
 genuinely did unpublish everything, re-run with `FORCE_BUILD=1`.
 
+## How publishing works
+
+```
+   you write on Substack
+            |
+   GitHub Actions (every 6h, or on any push)
+            |
+      builds site/  ->  pushes the "deploy" branch
+            |
+   Hostinger pulls "deploy" into public_html
+            |
+      adityadave.in
+```
+
+Two branches, two different jobs:
+
+- **`main`** holds everything: build scripts, templates, your About copy, and the
+  generated `site/`. This is the history.
+- **`deploy`** holds only the finished site, at the branch root, with `.htaccess`
+  included. Its history is disposable and rewritten on every publish. Hostinger
+  watches this branch and nothing else.
+
+The split exists because Hostinger deploys a whole branch, not a subfolder, so
+the site cannot simply live in `site/` on `main`.
+
 ## Deploying (one-time setup)
 
 **1. Push to GitHub**
+
+Public is simplest - it lets Hostinger clone without credentials, and GitHub
+Actions minutes are unlimited on public repositories. Nothing secret lives here.
 
 ```bash
 git remote add origin https://github.com/<your-username>/adityadave.in.git
 git push -u origin main
 ```
 
-**2. Connect Cloudflare Pages**
+Then run the workflow once (repo -> **Actions** -> **Publish site** -> **Run
+workflow**) so the `deploy` branch exists before Hostinger looks for it.
 
-At `dash.cloudflare.com` → **Workers & Pages** → **Create** → **Pages** →
-**Connect to Git**, pick the repo, then set:
+**2. Connect Hostinger to the repo**
 
-| Setting | Value |
+In hPanel, open your website, then **Advanced -> GIT**:
+
+| Field | Value |
 |---|---|
-| Framework preset | None |
-| Build command | *(leave empty)* |
-| Build output directory | `site` |
+| Repository | `https://github.com/<your-username>/adityadave.in.git` |
+| Branch | `deploy` |
+| Directory | leave empty (means `public_html`) |
 
-Cloudflare serves the pre-built `site/` folder as-is — GitHub Actions does the
-building, so there is no build step here to misconfigure or time out.
+`public_html` must be empty before the first pull, or Hostinger will refuse.
 
-**3. Point the domain at it**
+**3. Turn on automatic deployment**
 
-In the new Pages project → **Custom domains** → add `adityadave.in` and
-`www.adityadave.in`. Cloudflare will walk you through adding the domain to its
-DNS, which ends with changing the nameservers at Hostinger to the two Cloudflare
-gives you.
+Hostinger shows a **webhook URL** next to the connected repository. Copy it,
+then in GitHub go to **Settings -> Webhooks -> Add webhook**, paste it as the
+Payload URL, set content type to `application/json`, and leave it on "just the
+push event".
 
-That nameserver change is the only time you need to open Hostinger again. DNS
-usually propagates within an hour, occasionally up to 24.
+From then on: any push to `deploy` triggers Hostinger to pull it. Since the
+scheduled build pushes `deploy` whenever a new essay appears, new writing
+reaches the site on its own.
 
-**4. Afterwards**
+**4. Verify**
 
-Nothing. The Hostinger plan is prepaid through 2029, so leave it running and
-ignore it - that money is spent either way, and cancelling recovers none of it.
-The domain stays registered with Hostinger too; changing nameservers neither
-transfers it nor triggers a charge.
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://adityadave.in/
+curl -s -o /dev/null -w "%{http_code}\n" https://adityadave.in/hello-world/   # expect 301
+```
 
-Everything this site runs on sits inside a free tier with room to spare:
-Cloudflare Pages allows 500 deploys a month with unlimited bandwidth and
-requests for static assets, and GitHub Actions allows 2,000 minutes a month on
-private repositories (unlimited on public ones) against roughly 85 minutes of
-actual use.
+The second one only returns 301 if `.htaccess` deployed correctly.
+
+## Making a change to the site
+
+Edit the source, then:
+
+```bash
+python3 build/build.py
+git add -A && git commit -m "..." && git push
+```
+
+That is the whole loop. The push triggers the build, the build pushes `deploy`,
+the webhook triggers Hostinger, and the site updates. No file manager, no zips,
+no uploads.
 
 ## A note on the Substack subdomain
 
