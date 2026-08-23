@@ -237,8 +237,11 @@ hr { border: 0; }
   padding-block: clamp(1.5rem, 4vw, 2.75rem) 0;
 }
 
+/* The illustration is close to square, so at full container width it eats the
+   whole first screen and pushes the introduction below the fold. Holding it to
+   about 40rem keeps the picture and the opening words visible together. */
 .hero-scene__frame {
-  max-width: 62rem;
+  max-width: 40rem;
   margin-inline: auto;
 }
 
@@ -246,6 +249,7 @@ hr { border: 0; }
   display: block;
   width: 100%;
   height: auto;
+  border-radius: 6px;
 }
 
 /* The illustration carries its own warm ground, so in dark mode it would sit on
@@ -254,24 +258,6 @@ hr { border: 0; }
   :root:not([data-theme="light"]) .hero-art { filter: brightness(.9) saturate(.94); }
 }
 :root[data-theme="dark"] .hero-art { filter: brightness(.9) saturate(.94); }
-
-/* On a phone the full scene shrinks to about 128px tall, which loses the face
-   entirely. Better to crop the quiet edges - books, plant - and keep the figure
-   at a readable size. The figure sits at the horizontal centre, so overflowing
-   symmetrically keeps it centred. */
-@media (max-width: 40rem) {
-  .hero-scene__frame {
-    overflow: hidden;
-    border-radius: 14px;
-  }
-  .hero-art {
-    /* The base reset caps svg at max-width:100%, which would silently defeat
-       the overflow this crop depends on. */
-    max-width: none;
-    width: 176%;
-    margin-inline: -38%;
-  }
-}
 
 .intro {
   max-width: 46rem;

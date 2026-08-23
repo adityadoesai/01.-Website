@@ -412,10 +412,16 @@ def build_home(shell, cfg, posts):
     </div>
   </section>"""
 
-    with open(os.path.join(TEMPLATES, "hero.svg"), encoding="utf-8") as fh:
-        artwork = fh.read().strip()
     with open(os.path.join(CONTENT, "intro.html"), encoding="utf-8") as fh:
         intro_body = fh.read().strip()
+
+    artwork = (
+        '<img class="hero-art" src="assets/img/hero.jpg" width="1024" height="820"\n'
+        '             alt="Cartoon illustration of Aditya at his desk: laptop open in front of him,'
+        ' coffee and a stack of pitch decks beside it, a whiteboard of sticky notes and a rising'
+        ' chart behind him, and a spreadsheet on the monitor."\n'
+        '             fetchpriority="high" decoding="async">'
+    )
 
     hero = """  <section class="hero-scene">
     <div class="shell">

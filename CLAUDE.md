@@ -22,7 +22,7 @@ static HTML by `build/build.py`.
 | Site copy: tagline, hero, email, links | `build/config.json` |
 | About page prose | `content/about.html` |
 | Home page intro paragraph | `content/intro.html` |
-| The hero illustration | `build/templates/hero.svg` |
+| The hero illustration | `site/assets/img/hero.jpg` (master in `source/`) |
 | Page shell, `<head>`, nav, footer | `build/templates/base.html` |
 | Home / essays-index / essay / 404 markup | the `build_*` functions in `build/build.py` |
 | Substack HTML sanitising | `SubstackCleaner` in `build/build.py` |
@@ -41,17 +41,17 @@ collapsed every paragraph gap. Do not reintroduce bare element margins there.
 
 ## The hero illustration
 
-`build/templates/hero.svg` is hand-authored and inlined into the home page by
-`build_home()`, rather than referenced as an `<img>`, so it can be styled from
-the page. Two things to know before editing it:
+`site/assets/img/hero.jpg` is a centred 1024x820 crop of `source/hero-original.png`,
+a 1024x1024 generated illustration. `source/README.md` has the two `sips` commands
+to recut it.
 
-- It carries **no `id` attributes**. Inlined SVG shares an id namespace with the
-  page, so ids here can collide with page ids. Keep it that way.
-- Its colours are deliberately literal rather than tokens: it is an illustration,
-  not UI chrome. Dark mode dims it slightly instead of recolouring it.
-- On narrow screens it is deliberately cropped rather than scaled, because the
-  full scene shrinks to about 128px tall on a phone and the face disappears. That
-  crop needs `max-width: none` to defeat the base `svg { max-width: 100% }` reset.
+It is deliberately held to a 40rem frame rather than the full container width:
+the image is close to square, so at full width it fills the whole first screen
+and pushes the introduction below the fold, which is the opposite of what a
+hero should do.
+
+An earlier hand-authored SVG version lives in the git history if it is ever
+wanted back.
 
 ## Safety rails
 
