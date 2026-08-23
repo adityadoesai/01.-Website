@@ -1,0 +1,55 @@
+WHAT GOES BACK INTO public_html
+===============================
+
+Almost nothing. The 403 error was NOT caused by missing files.
+
+Your public_html is EMPTY. Every address checked - index.html, robots.txt,
+sitemap.xml, even the zip itself - returns "not found". A 403 at the root is
+simply Apache saying "this directory has no index page and I will not list its
+contents". The new site files never arrived on the server.
+
+So: do NOT put WordPress back. Restoring it would only restore the old broken
+site, along with its 21 known security vulnerabilities.
+
+
+THE ONE THING WORTH RESTORING
+-----------------------------
+
+  .well-known/          (included in this folder)
+
+This is how Let's Encrypt proves you own the domain when it renews your HTTPS
+certificate. It is empty of files by design - only the folder needs to exist.
+
+This is NOT urgent. Your current certificate is valid until 4 October 2026, and
+Hostinger normally recreates this folder by itself at renewal time. Restoring it
+now just removes any doubt.
+
+
+WHAT STAYS OUT, AND WHY
+-----------------------
+
+  wp-admin/ wp-content/ wp-includes/ wp-*.php   WordPress. The thing we replaced.
+  index.php                                     WordPress entry point. If this
+                                                comes back it overrides
+                                                index.html and you see the old
+                                                site again.
+  .htaccess  .htaccess.bk                       WordPress rewrite rules. These
+                                                send every request to index.php,
+                                                which no longer exists. The new
+                                                site ships its own .htaccess.
+  .private/                                     Hostinger's WordPress plugin
+                                                config. Meaningless without
+                                                WordPress, and it is marked
+                                                "Deny from all" anyway.
+  default.php                                   Hostinger's placeholder page.
+  index.html script.js styles.css               Your abandoned June 2025 site.
+  hero_background.png                           Superseded.
+  license.txt  readme.html                      WordPress documentation.
+
+Everything above stays in _public_html/ as a backup. Nothing is lost.
+
+
+THE ACTUAL FIX
+--------------
+
+Upload the site again - see _upload-to-public_html/ in the project folder.

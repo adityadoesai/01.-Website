@@ -18,6 +18,7 @@ import zipfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SITE = os.path.join(ROOT, "site")
 OUT = os.path.join(ROOT, "hostinger-upload.zip")
+OUT_DIR = os.path.join(ROOT, "_upload-to-public_html")
 
 # Cloudflare-only control files; meaningless to Apache.
 SKIP = {"_headers", "_redirects", ".DS_Store"}
@@ -106,9 +107,19 @@ def main():
                     path = os.path.join(root, name)
                     zf.write(path, os.path.relpath(path, staged))
 
+        # Also emit a plain folder. Hostinger's File Manager can upload a folder
+        # directly, which skips the extract step - a step that is easy to miss
+        # and fails silently when it is.
+        if os.path.isdir(OUT_DIR):
+            shutil.rmtree(OUT_DIR)
+        shutil.copytree(staged, OUT_DIR)
+
         size = os.path.getsize(OUT) / 1024
-        print("Packaged %d files -> %s (%.0f KB)" % (count, os.path.basename(OUT), size))
-        print("\nUpload this zip into public_html on Hostinger and extract it there.")
+        print("Packaged %d files." % count)
+        print("  zip    -> %s (%.0f KB)" % (os.path.basename(OUT), size))
+        print("  folder -> %s/" % os.path.basename(OUT_DIR))
+        print("\nUpload EITHER: drag the folder's contents into public_html,")
+        print("or upload the zip into public_html and extract it there.")
     finally:
         shutil.rmtree(staged, ignore_errors=True)
 
