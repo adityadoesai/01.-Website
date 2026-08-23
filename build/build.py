@@ -412,18 +412,34 @@ def build_home(shell, cfg, posts):
     </div>
   </section>"""
 
-    hero = """  <section class="hero">
+    with open(os.path.join(TEMPLATES, "hero.svg"), encoding="utf-8") as fh:
+        artwork = fh.read().strip()
+    with open(os.path.join(CONTENT, "intro.html"), encoding="utf-8") as fh:
+        intro_body = fh.read().strip()
+
+    hero = """  <section class="hero-scene">
     <div class="shell">
-      <h1 class="hero__title">{tagline}</h1>
-      <p class="hero__sub">{sub}</p>
-      <div class="hero__actions">
+      <div class="hero-scene__frame">
+{art}
+      </div>
+    </div>
+  </section>
+
+  <section class="intro">
+    <div class="shell">
+      <h1 class="intro__title">{tagline}</h1>
+      <div class="intro__body">
+{intro}
+      </div>
+      <div class="intro__actions">
         <a class="btn btn--primary" href="{sub_url}" rel="noopener">Subscribe</a>
-        <a class="arrowlink" href="about/">About me <span>&rarr;</span></a>
+        <a class="arrowlink" href="about/">More about me <span>&rarr;</span></a>
       </div>
     </div>
   </section>""".format(
+        art=artwork,
         tagline=e(cfg["tagline"]),
-        sub=e(cfg["hero_subtitle"]),
+        intro=intro_body,
         sub_url=cfg["substack_url"],
     )
 

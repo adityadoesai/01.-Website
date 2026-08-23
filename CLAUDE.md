@@ -21,6 +21,8 @@ static HTML by `build/build.py`.
 |---|---|
 | Site copy: tagline, hero, email, links | `build/config.json` |
 | About page prose | `content/about.html` |
+| Home page intro paragraph | `content/intro.html` |
+| The hero illustration | `build/templates/hero.svg` |
 | Page shell, `<head>`, nav, footer | `build/templates/base.html` |
 | Home / essays-index / essay / 404 markup | the `build_*` functions in `build/build.py` |
 | Substack HTML sanitising | `SubstackCleaner` in `build/build.py` |
@@ -36,6 +38,20 @@ One trap worth knowing: prose flow spacing in `main.css` is expressed as
 `.prose > * + *` style rules deliberately kept at (0,1,1) specificity, because an
 earlier `.prose p { margin: 0 }` at (0,1,1) silently beat a (0,1,0) flow rule and
 collapsed every paragraph gap. Do not reintroduce bare element margins there.
+
+## The hero illustration
+
+`build/templates/hero.svg` is hand-authored and inlined into the home page by
+`build_home()`, rather than referenced as an `<img>`, so it can be styled from
+the page. Two things to know before editing it:
+
+- It carries **no `id` attributes**. Inlined SVG shares an id namespace with the
+  page, so ids here can collide with page ids. Keep it that way.
+- Its colours are deliberately literal rather than tokens: it is an illustration,
+  not UI chrome. Dark mode dims it slightly instead of recolouring it.
+- On narrow screens it is deliberately cropped rather than scaled, because the
+  full scene shrinks to about 128px tall on a phone and the face disappears. That
+  crop needs `max-width: none` to defeat the base `svg { max-width: 100% }` reset.
 
 ## Safety rails
 

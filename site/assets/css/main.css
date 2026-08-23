@@ -231,6 +231,94 @@ hr { border: 0; }
   .nav a[aria-current="page"] { border-bottom-color: var(--rule-soft); color: var(--accent); }
 }
 
+/* --- Illustrated hero --------------------------------------------------- */
+
+.hero-scene {
+  padding-block: clamp(1.5rem, 4vw, 2.75rem) 0;
+}
+
+.hero-scene__frame {
+  max-width: 62rem;
+  margin-inline: auto;
+}
+
+.hero-art {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The illustration carries its own warm ground, so in dark mode it would sit on
+   the page like a lit panel. Softening it keeps it part of the page. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hero-art { filter: brightness(.9) saturate(.94); }
+}
+:root[data-theme="dark"] .hero-art { filter: brightness(.9) saturate(.94); }
+
+/* On a phone the full scene shrinks to about 128px tall, which loses the face
+   entirely. Better to crop the quiet edges - books, plant - and keep the figure
+   at a readable size. The figure sits at the horizontal centre, so overflowing
+   symmetrically keeps it centred. */
+@media (max-width: 40rem) {
+  .hero-scene__frame {
+    overflow: hidden;
+    border-radius: 14px;
+  }
+  .hero-art {
+    /* The base reset caps svg at max-width:100%, which would silently defeat
+       the overflow this crop depends on. */
+    max-width: none;
+    width: 176%;
+    margin-inline: -38%;
+  }
+}
+
+.intro {
+  max-width: 46rem;
+  margin-inline: auto;
+  padding-block: clamp(2rem, 5vw, 3rem) clamp(2.5rem, 6vw, 4rem);
+  text-align: center;
+}
+
+.intro__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 4.6vw, 2.9rem);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 0 0 1.25rem;
+  text-wrap: balance;
+}
+
+.intro__body {
+  margin: 0 auto;
+  max-width: 34em;
+  font-size: var(--step-lede);
+  line-height: 1.6;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+
+.intro__body p { margin: 0; }
+.intro__body strong { color: var(--ink); font-weight: 500; }
+
+.intro__body a {
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent);
+  transition: color 0.16s ease;
+}
+.intro__body a:hover { color: var(--accent); }
+
+.intro__actions {
+  margin-top: clamp(1.75rem, 4vw, 2.25rem);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
 /* --- Hero --------------------------------------------------------------- */
 
 .hero {
