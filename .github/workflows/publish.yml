@@ -47,11 +47,27 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add site build/cache/essays.json
 
+          # Push, and if the branch moved underneath us, rebase once and retry.
+          # Happens when two runs overlap, or when an old run is re-run after
+          # main has advanced. site/ is generated, so a stale copy of it must
+          # always lose to a freshly built one.
+          push_with_retry () {
+            if git push; then return 0; fi
+            echo "Push rejected; rebasing onto the current main and retrying."
+            git fetch origin main
+            git -c merge.ours.driver=true rebase origin/main || {
+              git checkout --ours -- site/ 2>/dev/null || true
+              python3 build/build.py
+              git add -A site
+              GIT_EDITOR=true git rebase --continue || return 1
+            }
+            git push
+          }
+
           if ! git diff --staged --quiet; then
             git commit -m "Rebuild site from Substack feed"
-            git push
-            echo "changed=yes" >> "$GITHUB_ENV"
-            exit 0
+            push_with_retry
+            exit $?
           fi
 
           # GitHub switches off scheduled workflows after 60 days of repository
@@ -65,7 +81,7 @@ jobs:
             date -u +"%Y-%m-%dT%H:%M:%SZ" > build/cache/last-run
             git add build/cache/last-run
             git commit -m "Heartbeat: keep the scheduled rebuild alive"
-            git push
+            push_with_retry
             echo "No content changes; pushed a heartbeat (${days} days idle)."
           else
             echo "No content changes (${days} days since last commit)."
