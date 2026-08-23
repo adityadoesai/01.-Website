@@ -1,0 +1,13 @@
+# Preserve inbound links to the old WordPress site.
+/hello-world/*       /essays/    301
+/venture-capital/*   /essays/    301
+/__trashed/*         /about/     301
+/feed/*              /feed.xml   301
+/category/*          /essays/    301
+/author/*            /about/     301
+
+# WordPress admin paths no longer exist; send bots and stale bookmarks home.
+/wp-admin/*          /           301
+/wp-login.php        /           301
+/wp-content/*        /           301
+/wp-json/*           /           301

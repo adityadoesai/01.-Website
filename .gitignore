@@ -1,0 +1,5 @@
+.DS_Store
+build/cache/feed.xml
+
+# Local backups of the previous WordPress-era site. Kept on disk, out of git.
+_archive/

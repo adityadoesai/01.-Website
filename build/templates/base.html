@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>{{PAGE_TITLE}}</title>
+<meta name="description" content="{{PAGE_DESC}}">
+<link rel="canonical" href="{{CANONICAL}}">
+<meta name="author" content="{{AUTHOR}}">
+<meta name="robots" content="index, follow, max-image-preview:large">
+
+<meta property="og:type" content="{{OG_TYPE}}">
+<meta property="og:site_name" content="{{SITE_TITLE}}">
+<meta property="og:title" content="{{OG_TITLE}}">
+<meta property="og:description" content="{{PAGE_DESC}}">
+<meta property="og:url" content="{{PAGE_URL}}">
+<meta property="og:image" content="{{BASE_URL}}/assets/img/portrait.jpg">
+<meta property="og:image:alt" content="Aditya Dave">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{OG_TITLE}}">
+<meta name="twitter:description" content="{{PAGE_DESC}}">
+<meta name="twitter:image" content="{{BASE_URL}}/assets/img/portrait.jpg">
+
+<meta name="theme-color" content="#FBF9F5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14120F" media="(prefers-color-scheme: dark)">
+
+<link rel="alternate" type="application/rss+xml" title="{{SITE_TITLE}}" href="{{BASE_URL}}/feed.xml">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap">
+<link rel="stylesheet" href="{{ROOT}}assets/css/main.css">
+
+<link rel="icon" href="{{ROOT}}assets/img/favicon.svg" type="image/svg+xml">
+{{HEAD_EXTRA}}
+</head>
+<body class="page">
+<a class="skip-link" href="#main">Skip to content</a>
+{{PROGRESS}}
+
+<header class="masthead">
+  <div class="shell masthead__inner">
+    <a class="wordmark" href="{{ROOT}}">Aditya Dave</a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <nav class="nav" id="nav" data-open="false" aria-label="Primary">
+      <a href="{{ROOT}}essays/"{{NAV_ESSAYS}}>Essays</a>
+      <a href="{{ROOT}}about/"{{NAV_ABOUT}}>About</a>
+      <a href="{{SUBSTACK_URL}}" rel="noopener">Subscribe</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+{{CONTENT}}
+</main>
+
+<footer class="footer">
+  <div class="shell">
+    <div class="footer__inner">
+      <div>
+        <p class="footer__brand">Aditya Dave</p>
+        <p class="footer__tag">{{TAGLINE}}</p>
+      </div>
+      <nav class="footer__links" aria-label="Footer">
+        <a href="{{ROOT}}essays/">Essays</a>
+        <a href="{{ROOT}}about/">About</a>
+        <a href="{{SUBSTACK_URL}}" rel="noopener">Subscribe</a>
+        <a href="{{LINKEDIN}}" rel="noopener">LinkedIn</a>
+        <a href="mailto:{{EMAIL}}">Email</a>
+        <a href="{{ROOT}}feed.xml">RSS</a>
+      </nav>
+    </div>
+    <p class="footer__legal">&copy; <span data-year>2026</span> Aditya Dave. Written in India.</p>
+  </div>
+</footer>
+
+<script src="{{ROOT}}assets/js/main.js" defer></script>
+</body>
+</html>
