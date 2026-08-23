@@ -610,7 +610,11 @@ def build_404(shell, cfg):
 # --------------------------------------------------------------------------
 
 def build_rss(cfg, posts):
-    now = format_datetime(datetime.now(timezone.utc))
+    # Derive lastBuildDate from the newest post, never from the clock. A
+    # wall-clock timestamp changes on every build, so the feed would differ every
+    # run even with nothing new - which defeats the "only commit when something
+    # changed" check and would redeploy the site every six hours forever.
+    last_build = format_datetime(posts[0]["date"]) if posts else ""
     items = []
     for post in posts[:20]:
         items.append("""  <item>
@@ -633,13 +637,14 @@ def build_rss(cfg, posts):
   <link>{base}/</link>
   <description>{desc}</description>
   <language>en</language>
-  <lastBuildDate>{now}</lastBuildDate>
-  <atom:link href="{base}/feed.xml" rel="self" type="application/rss+xml"/>
+{last_build}  <atom:link href="{base}/feed.xml" rel="self" type="application/rss+xml"/>
 {items}
 </channel>
 </rss>
 """.format(title=e(cfg["site_title"]), base=cfg["base_url"],
-           desc=e(cfg["description"]), now=now, items="\n".join(items))
+           desc=e(cfg["description"]),
+           last_build=("  <lastBuildDate>%s</lastBuildDate>\n" % last_build) if last_build else "",
+           items="\n".join(items))
 
 
 def build_sitemap(cfg, posts):
