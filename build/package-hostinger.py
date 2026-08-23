@@ -99,6 +99,14 @@ def main():
             fh.write(HTACCESS)
         count += 1
 
+        # Finder and most file managers hide names beginning with a dot, so the
+        # .htaccess is easy to leave behind during a drag-and-drop upload - and
+        # nothing visibly breaks when you do. Ship a visible twin that can be
+        # uploaded and renamed on the server instead.
+        with open(os.path.join(staged, "htaccess-RENAME-ME.txt"), "w", encoding="utf-8") as fh:
+            fh.write(HTACCESS)
+        count += 1
+
         if os.path.exists(OUT):
             os.remove(OUT)
         with zipfile.ZipFile(OUT, "w", zipfile.ZIP_DEFLATED) as zf:
