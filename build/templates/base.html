@@ -15,24 +15,22 @@
 <meta property="og:title" content="{{OG_TITLE}}">
 <meta property="og:description" content="{{PAGE_DESC}}">
 <meta property="og:url" content="{{PAGE_URL}}">
-<meta property="og:image" content="{{BASE_URL}}/assets/img/portrait.jpg">
-<meta property="og:image:alt" content="Aditya Dave">
+{{OG_IMAGE}}
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{{OG_TITLE}}">
 <meta name="twitter:description" content="{{PAGE_DESC}}">
-<meta name="twitter:image" content="{{BASE_URL}}/assets/img/portrait.jpg">
 
-<meta name="theme-color" content="#FBF9F5" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#14120F" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="{{THEME_LIGHT}}" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="{{THEME_DARK}}" media="(prefers-color-scheme: dark)">
 
 <link rel="alternate" type="application/rss+xml" title="{{SITE_TITLE}}" href="{{BASE_URL}}/feed.xml">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="{{ROOT}}assets/css/main.css">
 
-<link rel="icon" href="{{ROOT}}assets/img/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="{{ROOT}}assets/images/favicon.svg" type="image/svg+xml">
 {{HEAD_EXTRA}}
 </head>
 <body class="page">
@@ -69,13 +67,15 @@
       <nav class="footer__links" aria-label="Footer">
         <a href="{{ROOT}}essays/">Essays</a>
         <a href="{{ROOT}}about/">About</a>
-        <a href="{{SUBSTACK_URL}}" rel="noopener">Subscribe</a>
-        <a href="{{LINKEDIN}}" rel="noopener">LinkedIn</a>
-        <a href="mailto:{{EMAIL}}">Email</a>
+        <a href="{{SUBSTACK_URL}}" rel="noopener">Substack</a>
+{{FOOTER_SOCIAL}}
         <a href="{{ROOT}}feed.xml">RSS</a>
       </nav>
     </div>
-    <p class="footer__legal">&copy; <span data-year>2026</span> Aditya Dave. Written in India.</p>
+    <p class="footer__legal">
+      <span>&copy; <span data-year>2026</span> Aditya Dave</span>
+      <span>Views are personal.</span>
+    </p>
   </div>
 </footer>
 

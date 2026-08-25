@@ -220,13 +220,16 @@ page.
 --accent    #9A3B24   deep rust — links, underlines, small marks
 ```
 
-- **Display type:** Newsreader (serif), 400 weight, for headlines
-- **Body type:** Inter, **19px / 1.75 line-height / 68ch measure**
+- **Type:** Inter only, weights 400/500/600/700. No serif anywhere.
+- **Body:** 1.25rem / 1.7 line-height across a **42rem measure**
+- **Code:** system monospace stack, no webfont
 - Full warm dark-mode palette via `prefers-color-scheme`, with `[data-theme]`
   overrides so a toggle could win in either direction
 - Mobile nav, reading-progress bar on essays, skip link, visible focus states,
   `prefers-reduced-motion` respected
-- Total front-end weight: **903 lines of CSS, 67 lines of JS**, no frameworks
+- Every colour and every type size is a token; no literal values outside `:root`
+- Surfaces separated by hairline borders, never by lighter fills
+- No framework, no build toolchain
 
 ### The hero
 

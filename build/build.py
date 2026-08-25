@@ -307,10 +307,23 @@ def e(text):
     return html.escape(str(text), quote=True)
 
 
+def social_links(cfg, root):
+    """Footer social links. A blank config value renders nothing at all, so an
+    unverified URL can never ship as a dead link (R-53)."""
+    out = []
+    if cfg.get("linkedin"):
+        out.append('        <a href="%s" rel="noopener">LinkedIn</a>' % e(cfg["linkedin"]))
+    return "\n".join(out)
+
+
 def page(shell, cfg, *, content, title, desc, url, depth=0,
          og_type="website", og_title=None, canonical=None,
-         nav="", head_extra="", progress=False):
+         nav="", head_extra="", progress=False, og_image=None):
     root = "../" * depth if depth else ""
+    og_tag = ""
+    if og_image:
+        og_tag = ('<meta property="og:image" content="%s">\n'
+                  '<meta name="twitter:image" content="%s">' % (e(og_image), e(og_image)))
     return render(shell, {
         "PAGE_TITLE": e(title),
         "PAGE_DESC": e(desc),
@@ -323,9 +336,11 @@ def page(shell, cfg, *, content, title, desc, url, depth=0,
         "TAGLINE": e(cfg["tagline"]),
         "BASE_URL": cfg["base_url"],
         "SUBSTACK_URL": cfg["substack_url"],
-        "LINKEDIN": cfg["linkedin"],
-        "EMAIL": cfg["email"],
         "ROOT": root,
+        "OG_IMAGE": og_tag,
+        "THEME_LIGHT": cfg["theme_color_light"],
+        "THEME_DARK": cfg["theme_color_dark"],
+        "FOOTER_SOCIAL": social_links(cfg, root),
         "CONTENT": content,
         "HEAD_EXTRA": head_extra,
         "PROGRESS": '<div class="progress" aria-hidden="true"></div>' if progress else "",
@@ -334,38 +349,81 @@ def page(shell, cfg, *, content, title, desc, url, depth=0,
     })
 
 
-def essay_list_item(post, depth=0):
+def chips(post):
+    tags = post.get("tags") or []
+    if not tags:
+        return ""
+    items = "".join('<li class="chip">%s</li>' % e(t) for t in tags)
+    return '\n          <ul class="chips">%s</ul>' % items
+
+
+def card_media(post, root):
+    """Cover thumbnail, or a flat titled block when the essay has none, so the
+    grid never collapses and no broken image can appear (R-22)."""
+    cover = post.get("cover")
+    if cover:
+        return ('<div class="card__media"><img src="%scoverpath" alt="" loading="lazy" '
+                'decoding="async"></div>').replace("%scoverpath", e(root + cover))
+    return ('<div class="card__media card__media--fallback"><span>%s</span></div>'
+            % e(post["title"]))
+
+
+def essay_card(post, depth=0):
     root = "../" * depth if depth else ""
     return """      <li>
-        <a class="essay-item" href="{root}essays/{slug}/">
-          <p class="essay-item__meta"><time datetime="{iso}">{stamp}</time> <i>&middot;</i> {mins} min read</p>
-          <h3 class="essay-item__title">{title}</h3>
-          <p class="essay-item__excerpt">{excerpt}</p>
+        <a class="card" href="{root}essays/{slug}/">
+          {media}
+          <div class="card__body">
+            <p class="card__meta"><time datetime="{iso}">{stamp}</time> &middot; {mins} min read</p>
+            <h3 class="card__title">{title}</h3>
+            <p class="card__excerpt">{excerpt}</p>{chips}
+          </div>
         </a>
       </li>""".format(
         root=root,
         slug=post["slug"],
+        media=card_media(post, root),
         iso=post["date"].strftime("%Y-%m-%d"),
-        stamp=post["date"].strftime("%b %Y").upper(),
+        stamp=post["date"].strftime("%d %b %Y").lstrip("0"),
         mins=post["minutes"],
         title=e(post["title"]),
         excerpt=e(post["excerpt"]),
+        chips=chips(post),
     )
 
 
 def subscribe_block(cfg, heading, body):
+    """A styled link, not Substack's embed. The embed is an iframe on a pale
+    ground that cannot be restyled cross-origin, which is exactly the kind of
+    stray pale panel this design is trying to eliminate (D-1)."""
     return """  <section class="subscribe">
     <div class="shell">
       <h2 class="subscribe__title">{heading}</h2>
       <p class="subscribe__body">{body}</p>
-      <iframe class="subscribe__embed" src="{sub}/embed" title="Subscribe by email"
-              loading="lazy" scrolling="no" frameborder="0"></iframe>
-      <p class="subscribe__note">Delivered by Substack. No spam, and one click to leave.</p>
+      <a class="btn btn--primary" href="{sub}" rel="noopener">Subscribe on Substack</a>
+      <p class="subscribe__note">Free. Essays arrive by email as they are published.</p>
     </div>
   </section>""".format(heading=e(heading), body=e(body), sub=cfg["substack_url"])
 
 
+def person_schema(cfg):
+    same_as = [u for u in (cfg.get("linkedin"), cfg.get("substack_url")) if u]
+    data = {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": cfg["author"],
+        "url": cfg["base_url"],
+        "description": cfg["description"],
+    }
+    if same_as:
+        data["sameAs"] = same_as
+    return data
+
+
 def build_home(shell, cfg, posts):
+    """Name, one descriptor line, the illustration, then the essays. The
+    first-person introduction that used to sit here is the About page's job;
+    content/intro.html is left in the repo, unreferenced (R-19)."""
     if posts:
         listing = """  <section class="section">
     <div class="shell">
@@ -373,123 +431,67 @@ def build_home(shell, cfg, posts):
         <p class="eyebrow">Latest essays</p>
         <a class="arrowlink" href="essays/">All essays <span>&rarr;</span></a>
       </div>
-      <ul class="essays">
+      <ul class="cards">
 {items}
       </ul>
     </div>
-  </section>""".format(items="\n".join(essay_list_item(p) for p in posts[:5]))
+  </section>""".format(items="\n".join(essay_card(post) for post in posts[:6]))
     else:
         listing = """  <section class="section">
     <div class="shell">
-      <div class="empty">
-        <h2 class="empty__title">The first essays are being written.</h2>
-        <p class="empty__body">I would rather publish three pieces worth your time than
-        thirty worth mine. Leave your email and the first one will find you.</p>
-      </div>
+      <p class="empty">The first essays are being written.</p>
     </div>
   </section>"""
 
-    topics = """  <section class="section">
+    head = """  <section class="home-head">
     <div class="shell">
-      <div class="section__head"><p class="eyebrow">What I write about</p></div>
-      <ul class="topics" style="margin-top:2.5rem">
-        <li>
-          <h3>Investing</h3>
-          <p>What the Indian healthcare opportunity actually looks like from inside
-          an investment committee, rather than from a pitch deck.</p>
-        </li>
-        <li>
-          <h3>Healthcare</h3>
-          <p>Why the system resists scale, written by someone who practised medicine
-          before ever building a model about it.</p>
-        </li>
-        <li>
-          <h3>AI &amp; strategy</h3>
-          <p>Where the technology genuinely changes unit economics, and where it is
-          an expensive way to do what a spreadsheet already did.</p>
-        </li>
-      </ul>
-    </div>
-  </section>"""
-
-    with open(os.path.join(CONTENT, "intro.html"), encoding="utf-8") as fh:
-        intro_body = fh.read().strip()
-
-    artwork = (
-        '<img class="hero-art" src="assets/img/hero.jpg" width="1024" height="820"\n'
-        '             alt="Cartoon illustration of Aditya at his desk: laptop open in front of him,'
-        ' coffee and a stack of pitch decks beside it, a whiteboard of sticky notes and a rising'
-        ' chart behind him, and a spreadsheet on the monitor."\n'
-        '             fetchpriority="high" decoding="async">'
-    )
-
-    hero = """  <section class="hero-scene">
-    <div class="shell">
-      <div class="hero-scene__frame">
-{art}
-      </div>
+      <h1 class="home-head__name">{name}</h1>
+      <p class="home-head__line">{line}</p>
     </div>
   </section>
 
-  <section class="intro">
-    <div class="shell">
-      <h1 class="intro__title">{tagline}</h1>
-      <div class="intro__body">
-{intro}
-      </div>
-      <div class="intro__actions">
-        <a class="btn btn--primary" href="{sub_url}" rel="noopener">Subscribe</a>
-        <a class="arrowlink" href="about/">More about me <span>&rarr;</span></a>
-      </div>
+  <div class="shell">
+    <div class="hero-frame">
+      <img class="hero-art" src="assets/images/hero.png" alt="{alt}"
+           fetchpriority="high" decoding="async">
     </div>
-  </section>""".format(
-        art=artwork,
-        tagline=e(cfg["tagline"]),
-        intro=intro_body,
-        sub_url=cfg["substack_url"],
+  </div>""".format(
+        name=e(cfg["site_title"]),
+        line=e(cfg["tagline"]),
+        alt="Cartoon illustration of Aditya at his desk, laptop open, "
+            "a whiteboard of sticky notes and a rising chart behind him.",
     )
 
-    schema = """<script type="application/ld+json">%s</script>""" % json.dumps({
-        "@context": "https://schema.org",
-        "@type": "Person",
-        "name": cfg["author"],
-        "url": cfg["base_url"],
-        "email": "mailto:" + cfg["email"],
-        "jobTitle": "Investor and strategist",
-        "sameAs": [cfg["linkedin"], cfg["substack_url"]],
-    }, separators=(",", ":"))
+    schema = """<script type="application/ld+json">%s</script>""" % json.dumps(
+        person_schema(cfg), separators=(",", ":"))
 
     return page(
         shell, cfg,
-        content=hero + "\n" + listing + "\n" + subscribe_block(
+        content=head + "\n" + listing + "\n" + subscribe_block(
             cfg, "Stay curious",
-            "New essays on investing, healthcare and strategy in India, sent straight to your inbox."
-        ) + "\n" + topics,
-        title="%s — %s" % (cfg["site_title"], cfg["tagline"]),
+            "New essays on investing, healthcare and strategy in India."),
+        title=cfg["home_title"],
         desc=cfg["description"],
         url=cfg["base_url"] + "/",
         head_extra=schema,
+        og_image=cfg["base_url"] + "/assets/images/hero.png",
     )
 
 
 def build_essays_index(shell, cfg, posts):
     if posts:
-        body = """      <ul class="essays">
+        body = """      <ul class="cards">
 {items}
-      </ul>""".format(items="\n".join(essay_list_item(p, depth=1) for p in posts))
+      </ul>""".format(items="\n".join(essay_card(post, depth=1) for post in posts))
         count = "%d essay%s" % (len(posts), "" if len(posts) == 1 else "s")
     else:
-        body = """      <div class="empty">
-        <h2 class="empty__title">Nothing published yet.</h2>
-        <p class="empty__body">Essays will appear here automatically as they go out
-        to subscribers. Subscribing is the surest way to catch the first one.</p>
-      </div>"""
+        body = """      <p class="empty">Nothing published yet.</p>"""
         count = "Coming soon"
 
     content = """  <section class="section">
     <div class="shell">
       <div class="section__head">
-        <h1 class="about__title" style="margin-bottom:0">Essays</h1>
+        <h1 class="page-title">Essays</h1>
         <p class="eyebrow">{count}</p>
       </div>
 {body}
@@ -497,7 +499,7 @@ def build_essays_index(shell, cfg, posts):
   </section>
 {sub}""".format(count=e(count), body=body,
                 sub=subscribe_block(cfg, "Get the next one",
-                                    "Essays land in your inbox the moment they are published."))
+                                    "Essays arrive by email as they are published."))
 
     return page(
         shell, cfg,
@@ -513,29 +515,34 @@ def build_about(shell, cfg):
     with open(os.path.join(CONTENT, "about.html"), encoding="utf-8") as fh:
         about_body = fh.read().strip()
 
+    rows = []
+    if cfg.get("linkedin"):
+        rows.append('        <li><b>LinkedIn</b><span><a class="textlink" href="%s"'
+                    ' rel="noopener">Connect with me</a></span></li>' % e(cfg["linkedin"]))
+    rows.append('        <li><b>Newsletter</b><span><a class="textlink" href="%s"'
+                ' rel="noopener">Subscribe on Substack</a></span></li>' % cfg["substack_url"])
+
     content = """  <section class="about">
     <div class="shell">
-      <h1 class="about__title">About</h1>
+      <h1 class="page-title about__title">About</h1>
       <div class="about__layout">
         <div class="prose measure">
 {body}
         </div>
         <figure style="margin:0">
-          <img class="about__portrait" src="../assets/img/portrait.jpg"
+          <img class="about__portrait" src="../assets/images/portrait.jpg"
                width="900" height="900" alt="Portrait of Aditya Dave" loading="lazy" decoding="async">
           <figcaption class="about__portrait-cap">Aditya Dave</figcaption>
         </figure>
       </div>
       <ul class="contact">
-        <li><b>Email</b><span><a class="textlink" href="mailto:{email}">{email}</a></span></li>
-        <li><b>LinkedIn</b><span><a class="textlink" href="{linkedin}" rel="noopener">Connect with me</a></span></li>
-        <li><b>Newsletter</b><span><a class="textlink" href="{sub}" rel="noopener">Subscribe on Substack</a></span></li>
+{rows}
       </ul>
     </div>
-  </section>""".format(
-        body=about_body, email=cfg["email"],
-        linkedin=cfg["linkedin"], sub=cfg["substack_url"],
-    )
+  </section>""".format(body=about_body, rows="\n".join(rows))
+
+    schema = """<script type="application/ld+json">%s</script>""" % json.dumps(
+        person_schema(cfg), separators=(",", ":"))
 
     return page(
         shell, cfg,
@@ -543,54 +550,90 @@ def build_about(shell, cfg):
         title="About — %s" % cfg["site_title"],
         desc="Aditya Dave: doctor turned strategist and investor, writing on investing, healthcare and AI in India.",
         url=cfg["base_url"] + "/about/",
-        depth=1, nav="about", og_type="profile",
+        depth=1, nav="about", og_type="profile", head_extra=schema,
     )
 
 
-def build_essay(shell, cfg, post):
+def build_essay(shell, cfg, post, prev_post=None, next_post=None):
     url = "%s/essays/%s/" % (cfg["base_url"], post["slug"])
     canonical = post["source"] if cfg.get("canonical_to_substack") and post["source"] else url
 
-    schema = """<script type="application/ld+json">%s</script>""" % json.dumps({
+    cover_abs = None
+    cover_block = ""
+    if post.get("cover"):
+        cover_abs = cfg["base_url"] + "/" + post["cover"].lstrip("/")
+        cover_block = (
+            '\n      <figure class="article__cover">'
+            '\n        <img src="../../%s" alt="" decoding="async">'
+            '\n      </figure>' % e(post["cover"])
+        )
+
+    schema_data = {
         "@context": "https://schema.org",
-        "@type": "BlogPosting",
+        "@type": "Article",
         "headline": post["title"],
         "description": post["excerpt"],
         "datePublished": post["date"].isoformat(),
         "wordCount": post["words"],
         "author": {"@type": "Person", "name": cfg["author"], "url": cfg["base_url"]},
         "mainEntityOfPage": {"@type": "WebPage", "@id": url},
-    }, separators=(",", ":"))
+    }
+    if cover_abs:
+        schema_data["image"] = cover_abs
+    schema = '<script type="application/ld+json">%s</script>' % json.dumps(
+        schema_data, separators=(",", ":"))
 
-    source_link = ""
+    dek = ""
+    if post.get("subtitle"):
+        dek = '\n      <p class="article__dek">%s</p>' % e(post["subtitle"])
+
+    adjacent = []
+    if prev_post:
+        adjacent.append(
+            '        <a class="adjacent--prev" href="../%s/">\n'
+            '          <p class="eyebrow">Previous</p><strong>%s</strong>\n'
+            '        </a>' % (prev_post["slug"], e(prev_post["title"])))
+    if next_post:
+        adjacent.append(
+            '        <a class="adjacent--next" href="../%s/">\n'
+            '          <p class="eyebrow">Next</p><strong>%s</strong>\n'
+            '        </a>' % (next_post["slug"], e(next_post["title"])))
+    adjacent_block = ""
+    if adjacent:
+        adjacent_block = ('      <nav class="adjacent" aria-label="More essays">\n%s\n      </nav>\n'
+                          % "\n".join(adjacent))
+
+    source_line = ""
     if post["source"]:
-        source_link = '<a class="textlink" href="%s" rel="noopener">Read it on Substack</a>' % e(post["source"])
+        source_line = ('      <p class="postscript__source">Originally published on '
+                       '<a href="%s" rel="noopener">Substack</a>.</p>' % e(post["source"]))
 
-    content = """  <article class="article">
-    <div class="shell">
-      <a class="article__back" href="../"><span>&larr;</span> All essays</a>
-      <p class="article__meta">
-        <time datetime="{iso}">{stamp}</time> <i>&middot;</i> {mins} min read
-      </p>
-      <h1 class="article__title">{title}</h1>
-      <hr class="rule article__divider">
-      <div class="prose">
-{body}
-      </div>
-      <div class="postscript">
-        <span>Written by {author}</span>
-        <span>{source}</span>
-      </div>
-    </div>
-  </article>
-{sub}""".format(
+    content = (
+        '  <article class="article">\n'
+        '    <div class="shell">\n'
+        '      <a class="article__back" href="../"><span>&larr;</span> All essays</a>\n'
+        '      <p class="article__meta"><time datetime="{iso}">{stamp}</time> &middot; {mins} min read</p>\n'
+        '      <h1 class="article__title">{title}</h1>{dek}{cover}\n'
+        '      <hr class="rule article__divider">\n'
+        '      <div class="prose">\n'
+        '{body}\n'
+        '      </div>\n'
+        '      <div class="postscript">\n'
+        '{adjacent}{source}\n'
+        '      </div>\n'
+        '    </div>\n'
+        '  </article>\n'
+        '{sub}'
+    ).format(
         iso=post["date"].strftime("%Y-%m-%d"),
-        stamp=post["date"].strftime("%d %B %Y").lstrip("0").upper(),
+        stamp=post["date"].strftime("%d %B %Y").lstrip("0"),
         mins=post["minutes"],
         title=e(post["title"]),
+        dek=dek,
+        cover=cover_block,
         body=post["body"],
-        author=e(cfg["author"]),
-        source=source_link,
+        adjacent=adjacent_block,
+        source=source_line,
         sub=subscribe_block(cfg, "Enjoyed this?",
                             "Subscribe and the next essay arrives in your inbox."),
     )
@@ -602,7 +645,7 @@ def build_essay(shell, cfg, post):
         desc=post["excerpt"],
         url=url, canonical=canonical,
         depth=2, nav="essays", og_type="article", progress=True,
-        head_extra=schema,
+        head_extra=schema, og_image=cover_abs,
     )
 
 
@@ -613,7 +656,7 @@ def build_404(shell, cfg):
       <h1>This page went looking for a better idea.</h1>
       <p>The link may be old, or the essay may have moved. The essays index below
       has everything that currently exists.</p>
-      <div class="hero__actions">
+      <div class="actions">
         <a class="btn btn--primary" href="/essays/">Read the essays</a>
         <a class="arrowlink" href="/">Back home <span>&rarr;</span></a>
       </div>
@@ -769,9 +812,13 @@ def main():
     write(os.path.join(SITE, "about", "index.html"), build_about(shell, cfg))
     write(os.path.join(SITE, "404.html"), build_404(shell, cfg))
 
-    for post in posts:
+    for index, post in enumerate(posts):
+        # posts are newest-first, so the chronologically previous essay is the
+        # next item in the list, not the previous one.
+        older = posts[index + 1] if index + 1 < len(posts) else None
+        newer = posts[index - 1] if index > 0 else None
         write(os.path.join(SITE, "essays", post["slug"], "index.html"),
-              build_essay(shell, cfg, post))
+              build_essay(shell, cfg, post, prev_post=older, next_post=newer))
         print("  essay: /essays/%s/ (%d words, %d min)"
               % (post["slug"], post["words"], post["minutes"]))
 

@@ -31,8 +31,21 @@ static HTML by `build/build.py`.
 ## Design system
 
 Editorial and reading-first. Paper `#FBF9F5`, ink `#1A1815`, accent deep rust
-`#9A3B24`, with a warm dark-mode palette via `prefers-color-scheme`. Newsreader
-(serif) for headlines, Inter for body at 19px / 1.75 / 68ch measure.
+`#9A3B24`, with a warm dark-mode palette via `prefers-color-scheme`.
+
+**Inter is the only family**, at 400/500/600/700. There is no serif anywhere.
+Body is 1.25rem / 1.7 across a 42rem measure. Code uses a system monospace
+stack, not a webfont.
+
+Two rules that the stylesheet enforces and that reviews should check:
+
+- **Every colour is a token.** No literal colour values exist outside the
+  `:root` blocks - not in components, not in media queries, not in print.
+- **Every type size is a token.** Nothing sets `font-size` outside the scale,
+  so changing the reading experience is a change to the scale and nothing else.
+
+Surfaces are separated by hairline `--rule` borders, never by lighter fills.
+This is what keeps stray pale panels from appearing on a warm ground.
 
 One trap worth knowing: prose flow spacing in `main.css` is expressed as
 `.prose > * + *` style rules deliberately kept at (0,1,1) specificity, because an

@@ -1,11 +1,1 @@
-{
-  "version": "0.0.1",
-  "configurations": [
-    {
-      "name": "site",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["build/serve.py"],
-      "port": 4321
-    }
-  ]
-}
+{ "version": "0.0.1", "configurations": [ { "name": "site", "runtimeExecutable": "python3", "runtimeArgs": ["/private/tmp/claude-501/-Users-adityadave-Documents-01--Website/29e01d83-b249-46af-a5f7-cfc5babd6c4a/scratchpad/serve.py"], "port": 4321 } ] }
