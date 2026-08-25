@@ -115,3 +115,31 @@ jobs:
             deploy
 
           echo "Pushed $(find . -type f -not -path './.git/*' | wc -l | tr -d ' ') files to the deploy branch."
+
+      - name: Tell Hostinger to pull
+        # A webhook wired from GitHub to Hostinger fires on the push to main,
+        # which happens BEFORE this workflow has rebuilt the deploy branch - so
+        # Hostinger pulls the previous deploy and the site appears not to
+        # change. Calling the hook here instead makes the pull happen after the
+        # branch is actually ready.
+        #
+        # Optional: if the secret is not set the step is skipped, and deployment
+        # falls back to whatever the repository webhook does.
+        env:
+          HOSTINGER_DEPLOY_HOOK: ${{ secrets.HOSTINGER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOSTINGER_DEPLOY_HOOK" ]; then
+            echo "No HOSTINGER_DEPLOY_HOOK secret set; skipping the explicit pull."
+            echo "The site will update only if the repository webhook fires on"
+            echo "the deploy branch push. See README for how to set this up."
+            exit 0
+          fi
+          code=$(curl -sS -o /tmp/hook.out -w "%{http_code}" -X POST --max-time 30 "$HOSTINGER_DEPLOY_HOOK" || echo 000)
+          echo "Hostinger deploy hook returned HTTP $code"
+          head -c 400 /tmp/hook.out || true
+          case "$code" in
+            2*) echo "Hostinger accepted the deploy request." ;;
+            *)  echo "Hostinger did not accept the deploy request. The site may be"
+                echo "serving the previous version. Check the GIT page in hPanel."
+                exit 1 ;;
+          esac

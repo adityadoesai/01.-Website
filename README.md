@@ -122,6 +122,19 @@ From then on: any push to `deploy` triggers Hostinger to pull it. Since the
 scheduled build pushes `deploy` whenever a new essay appears, new writing
 reaches the site on its own.
 
+**3b. Make the pull deterministic (recommended)**
+
+The webhook GitHub sends on a push to `main` fires *before* the build has
+rebuilt the `deploy` branch, so Hostinger can pull the previous version and the
+site appears not to change. To remove that race, let the build call Hostinger
+directly once the branch is actually ready:
+
+1. Copy the webhook URL from hPanel -> **Advanced -> GIT**.
+2. In GitHub: **Settings -> Secrets and variables -> Actions -> New repository
+   secret**, named `HOSTINGER_DEPLOY_HOOK`, with that URL as the value.
+
+The workflow skips this step if the secret is absent, so it is safe to add later.
+
 **4. Verify**
 
 ```bash
