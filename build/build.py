@@ -293,6 +293,84 @@ def parse_feed(data, cfg):
 
 
 # --------------------------------------------------------------------------
+# Durable archive
+#
+# Substack's feed is windowed: it returns only the most recent posts. Rendering
+# straight from the feed therefore means the oldest essay silently drops off the
+# site the moment it falls out of that window, and prune_removed_essays() would
+# delete its page. For a site whose whole purpose is a durable archive, that is a
+# slow, invisible data loss.
+#
+# So every successful fetch writes each post to content/essays/, committed to the
+# repository, and the build renders the union of feed and archive. The feed wins
+# on conflict - that is how edits made on Substack propagate - and the archive is
+# updated to match.
+#
+# It also removes a single point of failure: a build can no longer be stopped by
+# Substack being unreachable, because everything needed to render the site is
+# already in the repository.
+# --------------------------------------------------------------------------
+
+ARCHIVE = os.path.join(CONTENT, "essays")
+
+ARCHIVE_FIELDS = ("title", "subtitle", "slug", "source", "excerpt",
+                  "words", "minutes", "cover", "tags")
+
+
+def archive_post(post):
+    """Write one essay to content/essays/ as body HTML plus a metadata sidecar."""
+    os.makedirs(ARCHIVE, exist_ok=True)
+    with open(os.path.join(ARCHIVE, post["slug"] + ".html"), "w", encoding="utf-8") as fh:
+        fh.write(post["body"])
+    meta = {k: post.get(k) for k in ARCHIVE_FIELDS}
+    meta["date"] = post["date"].isoformat()
+    with open(os.path.join(ARCHIVE, post["slug"] + ".json"), "w", encoding="utf-8") as fh:
+        json.dump(meta, fh, indent=2, ensure_ascii=False, sort_keys=True)
+        fh.write("\n")
+
+
+def save_archive(posts):
+    for post in posts:
+        archive_post(post)
+
+
+def load_archive():
+    """Read every archived essay back into the same shape parse_feed produces."""
+    if not os.path.isdir(ARCHIVE):
+        return []
+    out = []
+    for name in sorted(os.listdir(ARCHIVE)):
+        if not name.endswith(".json"):
+            continue
+        slug = name[:-5]
+        body_path = os.path.join(ARCHIVE, slug + ".html")
+        if not os.path.exists(body_path):
+            print("  ! archive entry %s has no body; skipping" % slug)
+            continue
+        try:
+            with open(os.path.join(ARCHIVE, name), encoding="utf-8") as fh:
+                meta = json.load(fh)
+            with open(body_path, encoding="utf-8") as fh:
+                body = fh.read()
+            meta["date"] = datetime.fromisoformat(meta["date"])
+            meta["body"] = body
+            meta.setdefault("slug", slug)
+            out.append(meta)
+        except (ValueError, OSError) as exc:
+            print("  ! could not read archive entry %s (%s)" % (slug, exc))
+    return out
+
+
+def merge_posts(feed_posts, archived):
+    """Union of feed and archive, newest first. Feed content wins on conflict."""
+    by_slug = {p["slug"]: p for p in archived}
+    by_slug.update({p["slug"]: p for p in feed_posts})
+    merged = list(by_slug.values())
+    merged.sort(key=lambda p: p["date"], reverse=True)
+    return merged
+
+
+# --------------------------------------------------------------------------
 # Rendering
 # --------------------------------------------------------------------------
 
@@ -748,8 +826,12 @@ def prune_removed_essays(current_slugs):
         except (ValueError, OSError):
             previous = []
 
+    archived_slugs = {n[:-5] for n in os.listdir(ARCHIVE)
+                      if n.endswith(".json")} if os.path.isdir(ARCHIVE) else set()
     for slug in previous:
-        if slug in current_slugs:
+        # Absence from the feed alone is not grounds for deletion: the feed is
+        # windowed, so an older essay leaves it while remaining perfectly valid.
+        if slug in current_slugs or slug in archived_slugs:
             continue
         stale = os.path.join(SITE, "essays", slug)
         if os.path.isdir(stale):
@@ -783,28 +865,40 @@ def main():
     known = previously_published()
 
     print("Building %s" % cfg["base_url"])
-    data = fetch_feed(cfg["substack_feed"])
 
-    # Safety rail 1: never publish an empty site because the network blipped.
-    if data is None and known and not force:
-        print("\nREFUSING TO BUILD: the feed could not be fetched and there is no\n"
-              "cache, but %d essay(s) are currently published. Publishing now would\n"
-              "delete them. The existing site/ is untouched.\n"
-              "Override with FORCE_BUILD=1 if this is really what you want."
+    archived = load_archive()
+    print("  archived essays: %d" % len(archived))
+
+    data = fetch_feed(cfg["substack_feed"])
+    feed_posts = parse_feed(data, cfg) if data else []
+    if data:
+        print("  feed essays: %d" % len(feed_posts))
+        save_archive(feed_posts)
+        archived = load_archive()
+    else:
+        print("  feed unavailable; rendering from the archive alone")
+
+    posts = merge_posts(feed_posts, archived)
+    print("  rendering: %d essay(s)" % len(posts))
+
+    # Safety rail. With the archive in place a failed fetch is no longer fatal -
+    # everything needed to render is already in the repository - so the only
+    # case worth refusing is one where the site would lose essays it previously
+    # published and cannot recover them from anywhere.
+    if known and not posts and not force:
+        print("\nREFUSING TO BUILD: %d essay(s) were published on the last run, but\n"
+              "neither the Substack feed nor content/essays/ can supply any now.\n"
+              "Publishing this would delete them, so site/ is untouched.\n"
+              "Override with FORCE_BUILD=1 if you genuinely unpublished everything."
               % len(known))
         return 1
 
-    posts = parse_feed(data, cfg)
-    print("  essays: %d" % len(posts))
-
-    # Safety rail 2: a feed that suddenly reports zero posts is far more often a
-    # Substack hiccup than a deliberate mass-unpublish.
-    if known and not posts and not force:
-        print("\nREFUSING TO BUILD: the feed parsed cleanly but returned zero essays,\n"
-              "while %d were published on the last run. That is far more likely to be\n"
-              "a Substack glitch than a real deletion, so site/ is untouched.\n"
-              "Override with FORCE_BUILD=1 if you genuinely unpublished everything."
-              % len(known))
+    missing = [slug for slug in known if slug not in {p["slug"] for p in posts}]
+    if missing and not force:
+        print("\nREFUSING TO BUILD: %d previously published essay(s) are missing from\n"
+              "both the feed and the archive: %s\n"
+              "site/ is untouched. Override with FORCE_BUILD=1 if this is intended."
+              % (len(missing), ", ".join(missing)))
         return 1
 
     write(os.path.join(SITE, "index.html"), build_home(shell, cfg, posts))
@@ -820,7 +914,7 @@ def main():
         write(os.path.join(SITE, "essays", post["slug"], "index.html"),
               build_essay(shell, cfg, post, prev_post=older, next_post=newer))
         print("  essay: /essays/%s/ (%d words, %d min)"
-              % (post["slug"], post["words"], post["minutes"]))
+              % (post["slug"], post.get("words") or 0, post.get("minutes") or 1))
 
     prune_removed_essays({p["slug"] for p in posts})
 

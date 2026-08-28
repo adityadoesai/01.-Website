@@ -66,6 +66,25 @@ hero should do.
 An earlier hand-authored SVG version lives in the git history if it is ever
 wanted back.
 
+## The durable archive
+
+Substack's feed is windowed - it returns only recent posts. Every successful
+fetch therefore writes each essay to `content/essays/` (body HTML plus a JSON
+sidecar), **committed to the repository**, and the build renders the union of
+feed and archive. Feed content wins on conflict, so edits made on Substack still
+propagate.
+
+Two consequences worth knowing:
+
+- `prune_removed_essays()` deletes a page only when the slug is absent from
+  **both** the feed and the archive. Absence from the feed alone means the essay
+  aged out of the window, not that it was withdrawn.
+- **A build can no longer be stopped by Substack being unreachable.** Everything
+  needed to render is already in the repository. This matters: before the
+  archive existed, a failed fetch with essays already published tripped a safety
+  rail, exited non-zero, and silently stopped the deploy branch from updating -
+  so the live site quietly froze while pushes appeared to succeed.
+
 ## Safety rails
 
 `build/build.py` exits non-zero rather than publishing if the feed is
