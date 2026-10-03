@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+  <title>Aditya Dave</title>
+  <link>https://adityadave.in/</link>
+  <description>Essays on investing, healthcare and strategy in India — by Aditya Dave, a doctor turned strategist and investor.</description>
+  <language>en</language>
+  <lastBuildDate>Tue, 25 Aug 2026 02:17:22 +0000</lastBuildDate>
+  <atom:link href="https://adityadave.in/feed.xml" rel="self" type="application/rss+xml"/>
+  <item>
+    <title>India&#x27;s missing middle?</title>
+    <link>https://adityadave.in/essays/indias-missing-middle/</link>
+    <guid isPermaLink="true">https://adityadave.in/essays/indias-missing-middle/</guid>
+    <pubDate>Tue, 25 Aug 2026 02:17:22 +0000</pubDate>
+    <description>A lot of consumer startup reports that I have come across, have a common thread - the rise of India’s middle class and its growing discretionary income fueling India’s consumption growth.</description>
+  </item>
+</channel>
+</rss>
